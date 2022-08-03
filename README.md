@@ -4,7 +4,7 @@ Telenav Github Reusable Workflows
 Contains workflow `.yml` files used by Github Actions to build on push or pull request
 for kivakit, mesakit, lexakai, lexakai-annotations and perhaps others.
 
-Original workflow files are in `workflows/` and are symlinked into `.github/workflows`.
+Workflow files are in `.github/workflows/`.
 
 What's Here
 -----------
