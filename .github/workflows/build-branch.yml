@@ -14,30 +14,12 @@ defaults:
     shell: bash
 
 env:
-    CACTUS_VERSION: 1.5.18
+    CACTUS_VERSION: 1.5.19
 
-name: "Build Branch"
+name: "Shard Branch Build"
 
 on:
   workflow_call:
-    paths-ignore:
-        - 'documentation/**'
-        - '**/*.md'
-    branches:
-      - develop
-      - 'release/**'
-      - feature/**'
-      - 'hotfix/**'
-      - '!*-wip'
-  pull_request:
-    paths-ignore:
-        - 'documentation/**'
-        - '**/*.md'
-    branches:
-      - develop
-      - 'release/**'
-      - feature/**'
-      - 'hotfix/**'
 
 jobs:
   build:
