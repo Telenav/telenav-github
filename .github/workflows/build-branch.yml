@@ -45,7 +45,7 @@ jobs:
         run: cat $GITHUB_ENV
         
       - name: Print Targets
-        run: echo "GITHUB_REF_TYPE=$GITHUB_REF_TYPE GITHUB_REF=$GITHUB_REF GITHUB_SHA=$GITHUB_SHA GITHUB_BASE_REF=$GITHUB_BASE_REF"
+        run: echo "GITHUB_REF_TYPE=$GITHUB_REF_TYPE GITHUB_REF=$GITHUB_REF GITHUB_SHA=$GITHUB_SHA GITHUB_BASE_REF=$GITHUB_BASE_REF GITHUB_REF_NAME=$GITHUB_REF_NAME"
 
       # We need this because we will create a commit in order to ensure that when
       # The build runs, there are no local changes (cactus may check this, so a
