@@ -121,6 +121,14 @@ jobs:
       - name: Build Local Superpoms
         run: cd $GITHUB_WORKSPACE/telenav-build/telenav-superpom && mvn install
 
+      # Temporary until we fix in cactus - the fallback "develop" branch must
+      # exist locally to be able to use it as a fallback, and it may not.
+      # CheckoutMojo *should* either create a local tracking branch and then
+      # switch away from it if exists remotely but not locally, or it should
+      # do so, rather than fail, in the case the fallback does not exist
+      - name: Ensure Local Development branch
+        run: cd $GITHUB_WORKSPACE/telenav-build && mvn -Dcactus.permit-local-changes=true -Dcactus.base-branch=develop -Dcactus.fetch-first=false -Dcactus.create-branches=true -Dcactus.target-branch=develop -Dcactus.permit-local-changes=true -Dcactus.fetch-first=false -Dcactus.update-root=false -Dcactus.scope=family -Dcactus.families=kivakit,mesakit,lexakai -Dcactus.verbose=true -Dpush=false com.telenav.cactus:cactus-maven-plugin:$CACTUS_VERSION:checkout
+
       # This will fail over to the develop branch if the target branch does not
       # exist.
       - name: Checkout Branch
