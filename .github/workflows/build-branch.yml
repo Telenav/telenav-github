@@ -16,7 +16,7 @@ defaults:
 env:
     CACTUS_VERSION: 1.5.19
 
-name: "Shard Branch Build"
+name: "Shared Branch Build"
 
 on:
   workflow_call:
@@ -124,7 +124,7 @@ jobs:
       # This will fail over to the develop branch if the target branch does not
       # exist.
       - name: Checkout Branch
-        run: cd $GITHUB_WORKSPACE/telenav-build && mvn -Dcactus.permit-local-changes=true -Dcactus.base-branch=develop -Dcactus.fetch-first=false -Dcactus.create-branches=true -Dcactus.target-branch=$GITHUB_REF_NAME -Dcactus.permit-local-changes=false -Dcactus.update-root=false -Dcactus.scope=family -Dcactus.families=kivakit,mesakit,lexakai -Dpush=false com.telenav.cactus:cactus-maven-plugin:$CACTUS_VERSION:checkout
+        run: cd $GITHUB_WORKSPACE/telenav-build && mvn -Dcactus.permit-local-changes=true -Dcactus.base-branch=develop -Dcactus.fetch-first=false -Dcactus.create-branches=true -Dcactus.target-branch=$GITHUB_REF_NAME -Dcactus.permit-local-changes=false -Dcactus.fetch-first=false -Dcactus.update-root=false -Dcactus.scope=family -Dcactus.families=kivakit,mesakit,lexakai -Dpush=false com.telenav.cactus:cactus-maven-plugin:$CACTUS_VERSION:checkout
 
       # Check out the pull request branch or commit that we
       # want to test
