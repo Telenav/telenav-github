@@ -129,7 +129,7 @@ jobs:
       # Check out the pull request branch or commit that we
       # want to test
       - name: Move Project to Target Ref
-        run: cd $GITHUB_WORKSPACE/telenav-build/$PROJECT && git checkout $GITHUB_REF
+        run: cd $GITHUB_WORKSPACE/telenav-build/$PROJECT && git checkout $GITHUB_SHA
 
       # Need to build superpoms, as they may be unpublished
       - name: Build Superpoms
