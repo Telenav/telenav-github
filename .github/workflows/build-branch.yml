@@ -40,12 +40,15 @@ jobs:
       - name: Set Up Empty Local Maven Repository
         run: echo "MAVEN_REPO=/tmp/mr-${WHEN}" >> $GITHUB_ENV
 
-      # Debug shell quoting
+      # Debug shell quoting and a few other things
       - name: Print Environment
         run: cat $GITHUB_ENV
-        
+
       - name: Print Targets
         run: echo "GITHUB_REF_TYPE=$GITHUB_REF_TYPE GITHUB_REF=$GITHUB_REF GITHUB_SHA=$GITHUB_SHA GITHUB_BASE_REF=$GITHUB_BASE_REF GITHUB_REF_NAME=$GITHUB_REF_NAME"
+
+      - name: Print Git Version
+        run: git --version
 
       # We need this because we will create a commit in order to ensure that when
       # The build runs, there are no local changes (cactus may check this, so a
@@ -84,7 +87,7 @@ jobs:
 
       - name: Remove Mesakit Assets Before Updating Submodules
         run: cd $GITHUB_WORKSPACE/telenav-build && git rm -f mesakit-assets
-        
+
       # If we use MAVEN_OPTS, we wind up in a shell-quoting war between yaml
       # and bash that ends in NoClassDefFoundError:-XX:+UseG1GC - so instead,
       # we write .mvn/jvm.config instead, and make sure that it won't get
@@ -108,7 +111,7 @@ jobs:
       # at concurrent programming.
       - name: Write Maven Config File
         run: echo "--no-transfer-progress --batch-mode" >> $GITHUB_WORKSPACE/telenav-build/.mvn/maven.config
-        
+
       # For consistency, ensure nothing we run (such as cactus tests) will
       # detect that they are running in a modified repository
       - name: Ensure No Apparent Local Changes
