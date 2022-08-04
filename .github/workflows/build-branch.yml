@@ -127,6 +127,18 @@ jobs:
       - name: Build Local Superpoms
         run: cd $GITHUB_WORKSPACE/telenav-build/telenav-superpom && mvn install
 
+      # If a PR, GITHUB_SHA points to a merge commit that does not actually
+      # exists locally - we need to explicitly fetch it so that we will be
+      # able to check it out by hash
+      - name: Ensure Merge Commit Is Available Locally
+        run: cd $GITHUB_WORKSPACE/telenav-build/$PROJECT && git fetch origin $GITHUB_REF
+        
+      # Debugging problems with PR builds - if we are getting a ref like
+      # refs/pull/130/merge see there is anything like that locally that
+      # could possibly work
+      - name: Debug List Local Refs
+        run: find $GITHUB_WORKSPACE/telenav-build/.git/$PROJECT/refs || echo No refs dir
+        
       # This will fail over to the develop branch if the target branch does not
       # exist.
       - name: Checkout Branch
