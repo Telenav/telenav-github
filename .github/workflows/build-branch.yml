@@ -1,0 +1,213 @@
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#
+#  © 2022 Telenav, Inc.
+#  Licensed under Apache License, Version 2.0
+#
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#
+# GitHub action that builds code on push or pull request.
+#
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CACTUS_VERSION: 1.5.24
+  ZULIP_API_KEY: ${{ secrets.ZULIP_API_KEY }}
+  
+name: "Shared Branch Build"
+
+on:
+  workflow_call:
+    secrets:
+      ZULIP_API_KEY:
+        required: true
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    env:
+      ZULIP_API_KEY: ${{ secrets.ZULIP_API_KEY }}
+
+    steps:
+
+      - name: Build Failed
+        if: failure()
+        run: curl -X POST https://telenav.zulipchat.com/api/v1/messages -u "message-bot@telenav.zulipchat.com:$ZULIP_API_KEY" --data-urlencode type=stream --data-urlencode to=github-notifications --data-urlencode topic=build-failures --data-urlencode content="Build of $GITHUB_REPOSITORY ($GITHUB_ACTOR $GITHUB_EVENT_NAME $GITHUB_REF_NAME) failed"
+
+      - name: Waiting to Build
+        run: curl -X POST https://telenav.zulipchat.com/api/v1/messages -u "message-bot@telenav.zulipchat.com:$ZULIP_API_KEY" --data-urlencode type=stream --data-urlencode to=github-notifications --data-urlencode topic=builds --data-urlencode content="Waiting to build $GITHUB_REPOSITORY ($GITHUB_ACTOR $GITHUB_EVENT_NAME $GITHUB_REF_NAME)"
+
+      # Use an env var for the project name, so this workflow can be reused
+      # for everything. Eventually we can make it a shared workflow once it's
+      # sufficiently robust.
+      - name: Set up PROJECT Environment
+        run: echo "PROJECT=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
+
+      - name: Collect Timestamp for Maven Repo
+        run: echo "WHEN=$(date '+%s')" >> $GITHUB_ENV
+
+      - name: Set Up Empty Local Maven Repository
+        run: echo "MAVEN_REPO=/tmp/mr-${WHEN}" >> $GITHUB_ENV
+        
+      - name: Set Up Target Branch
+        run: echo 'TARGET_BRANCH='$([ "$GITHUB_EVENT_NAME" = "pull_request" ] && echo "$GITHUB_HEAD_REF" || echo "$GITHUB_REF_NAME") >> $GITHUB_ENV
+        
+      - name: Set Up Base Branch
+        run: echo 'BASE_BRANCH='$([ "$GITHUB_EVENT_NAME" = "pull_request" ] && echo "$GITHUB_BASE_REF" || echo "develop") >> $GITHUB_ENV
+
+      - name: Set Up Target Commit
+        run: echo 'TARGET_COMMIT='$([ "$GITHUB_EVENT_NAME" = "pull_request" ] && echo "$GITHUB_REF" || echo "$GITHUB_SHA") >> $GITHUB_ENV
+        
+      - name: Set Up Checkout Command
+        run: echo 'CHECKOUT_COMMAND='$([ "$GITHUB_EVENT_NAME" = "pull_request" ] && echo "git pull --rebase origin $TARGET_COMMIT" || echo "git checkout $TARGET_COMMIT") >> $GITHUB_ENV
+        
+      # Debug shell quoting and a few other things
+      - name: Print Environment
+        run: cat $GITHUB_ENV
+
+      - name: Print Targets
+        run: echo "GITHUB_REF_TYPE=$GITHUB_REF_TYPE\nGITHUB_REF=$GITHUB_REF\nGITHUB_SHA=$GITHUB_SHA\nGITHUB_BASE_REF=$GITHUB_BASE_REF\nGITHUB_REF_NAME=$GITHUB_REF_NAME\nGITHUB_SHA=$GITHUB_SHA\nGITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+
+      - name: Print Git Version
+        run: git --version
+
+      - name: Print Entire Environment
+        run: set
+
+      # We need this because we will create a commit in order to ensure that when
+      # The build runs, there are no local changes (cactus may check this, so a
+      # consistent state is good to have)
+      - name: Configure Git
+        run: git config --global user.email "nobody@nowhere.com" && git config --global user.name "Nobody"
+
+      - name: Set Up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set Up Maven
+        uses: stCarolas/setup-maven@v4.3
+        with:
+          maven-version: 3.8.5
+          
+      - name: Sleep 30 Seconds
+        run: echo "Sleep 30 seconds to ensure related changes in other repositories are pushed." && sleep 30 && echo Sleep finished.
+
+      - name: Building
+        run: curl -X POST https://telenav.zulipchat.com/api/v1/messages -u "message-bot@telenav.zulipchat.com:$ZULIP_API_KEY" --data-urlencode type=stream --data-urlencode to=github-notifications --data-urlencode topic=builds --data-urlencode content="Building $GITHUB_REPOSITORY ($GITHUB_ACTOR $GITHUB_EVENT_NAME $GITHUB_REF_NAME)"
+
+      - name: Clone Telenav-Build
+        run: git clone https://github.com/Telenav/telenav-build.git -b develop
+
+      - name: Init Submodules
+        run: cd $GITHUB_WORKSPACE/telenav-build && git submodule init
+
+      # Delete the assets submodules before we do anything, since we
+      # do not need them and they are huge and will slow down the job
+      # considerably.
+      - name: Remove Cactus Assets Before Updating Submodules
+        run: cd $GITHUB_WORKSPACE/telenav-build && git rm -f cactus-assets
+
+      - name: Remove Kivakit Assets Before Updating Submodules
+        run: cd $GITHUB_WORKSPACE/telenav-build && git rm -f kivakit-assets
+
+      - name: Remove Lexakai Assets Before Updating Submodules
+        run: cd $GITHUB_WORKSPACE/telenav-build && git rm -f lexakai-assets
+
+      - name: Remove Mesakit Assets Before Updating Submodules
+        run: cd $GITHUB_WORKSPACE/telenav-build && git rm -f mesakit-assets
+
+      # If we use MAVEN_OPTS, we wind up in a shell-quoting war between yaml
+      # and bash that ends in NoClassDefFoundError:-XX:+UseG1GC - so instead,
+      # we write .mvn/jvm.config instead, and make sure that it won't get
+      # picked up as a local change by the branch switch mojo by ignoring it.
+      - name: Set Up Maven JVM Config Dir
+        run: mkdir -p $GITHUB_WORKSPACE/telenav-build/.mvn
+
+      - name: Ignore Maven Config Dir
+        run: echo ".mvn/" >> $GITHUB_WORKSPACE/telenav-build/.gitignore
+
+      # See: https://www.baeldung.com/maven-logging for a summary of logging
+      # options
+      - name: Write Maven JVM Options Config File
+        run: echo "-XX:+UseG1GC -Dcactus-maven-plugin.version=$CACTUS_VERSION -Dorg.slf4j.simpleLogger.defaultLogLevel=warn -Dmaven.repo.local=$MAVEN_REPO --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" >> $GITHUB_WORKSPACE/telenav-build/.mvn/jvm.config
+
+      # Maven arguments we want for everything.
+      # RESIST the temptation to add --quiet here - it will suppress critical
+      # diagnostics when there are build file or plugin problems.  Also
+      # do not add -T / --threads here - it is faster but hit-or-miss you're
+      # relying on every plugin author whose code might run actually being good
+      # at concurrent programming.
+      - name: Write Maven Config File
+        run: echo "--no-transfer-progress --batch-mode" >> $GITHUB_WORKSPACE/telenav-build/.mvn/maven.config
+
+      # For consistency, ensure nothing we run (such as cactus tests) will
+      # detect that they are running in a modified repository
+      - name: Ensure No Apparent Local Changes
+        run: cd $GITHUB_WORKSPACE/telenav-build && git add -A && git commit -m "----remove-assets----"
+
+      # Now we are ready to pull git submodules
+      - name: Update Submodules
+        run: cd $GITHUB_WORKSPACE/telenav-build && git submodule update --no-recommend-shallow --no-single-branch
+
+      # If a PR, GITHUB_SHA points to a merge commit that does not actually
+      # exists locally - we need to explicitly fetch it so that we will be
+      # able to check it out by hash
+      - name: Ensure Merge Commit Is Available Locally
+        run: cd $GITHUB_WORKSPACE/telenav-build/$PROJECT && git fetch origin $GITHUB_REF
+        
+      # Debugging problems with PR builds - if we are getting a ref like
+      # refs/pull/130/merge see there is anything like that locally that
+      # could possibly work
+      - name: Debug List Local Refs
+        run: find $GITHUB_WORKSPACE/telenav-build/.git/modules/$PROJECT/refs || echo No refs dir
+        
+      # For debugging, see what we ended up on after the initial clone/init/update
+      # cycle - this could be useful if something odd winds up committed to the root
+      # checkout
+      - name: Print Initial Checked Out Branches
+        run: cd $GITHUB_WORKSPACE/telenav-build && git submodule foreach git branch && git status
+        
+      # Ensure we know about all of the refs we should
+      - name: Fetch All
+        run: cd $GITHUB_WORKSPACE/telenav-build && git fetch --all && git submodule foreach git fetch --all
+
+      # Get everything (that can be) on the base branch
+      - name: Checkout Base Branch
+        run: cd $GITHUB_WORKSPACE/telenav-build && git submodule foreach 'echo $(git checkout $BASE_BRANCH || echo No branch $BASE_BRANCH here)'
+
+      # And check out the target branch in any project that has it, so cross-repository
+      # issues are buildable
+      - name: Checkout Target Branch
+        run: cd $GITHUB_WORKSPACE/telenav-build && git submodule foreach 'echo $(git checkout $TARGET_BRANCH || echo No branch $TARGET_BRANCH here)'
+
+      # Check out the pull request branch or commit that we
+      # want to test
+      - name: Move Project to Target Ref
+        run: cd $GITHUB_WORKSPACE/telenav-build/$PROJECT && echo "Run $CHECKOUT_COMMAND" && eval $CHECKOUT_COMMAND
+
+      # For debugging wrong ref problems, print out where we wind up after doing our
+      # checkout machinations
+      - name: Print Checked Out Branches
+        run: cd $GITHUB_WORKSPACE/telenav-build && git submodule foreach git branch && git status
+
+      # Need to build superpoms, as they may be unpublished
+      - name: Build Superpoms
+        run: cd $GITHUB_WORKSPACE/telenav-build && mvn -f telenav-superpom/pom.xml install
+
+      # Now build the real thing
+      - name: Build Target Commit
+        run: cd $GITHUB_WORKSPACE/telenav-build && mvn install
+
+      - name: Done Building
+        run: curl -X POST https://telenav.zulipchat.com/api/v1/messages -u "message-bot@telenav.zulipchat.com:$ZULIP_API_KEY" --data-urlencode type=stream --data-urlencode to=github-notifications --data-urlencode topic=builds --data-urlencode content="Done building $GITHUB_REPOSITORY ($GITHUB_ACTOR $GITHUB_EVENT_NAME $GITHUB_REF_NAME)"
+
+      # And *always* delete the local repo
+      - name: Clean Up Local Maven Repo
+        if: always()
+        run: rm -Rf $MAVEN_REPO
