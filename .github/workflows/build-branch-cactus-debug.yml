@@ -202,7 +202,7 @@ jobs:
 
       # Now build the real thing
       - name: Build Target Commit
-        run: cd $GITHUB_WORKSPACE/telenav-build && mvn -Dcactus.test.debug=true -Dcactus.test.slf4j.debug=true install
+        run: cd $GITHUB_WORKSPACE/telenav-build && mvn -Dcactus.debug=true -Dcactus.test.debug=true -Dcactus.test.slf4j.debug=true install
 
       - name: Done Building
         run: curl -X POST https://telenav.zulipchat.com/api/v1/messages -u "message-bot@telenav.zulipchat.com:$ZULIP_API_KEY" --data-urlencode type=stream --data-urlencode to=github-notifications --data-urlencode topic=builds --data-urlencode content="Done building $GITHUB_REPOSITORY ($GITHUB_ACTOR $GITHUB_EVENT_NAME $GITHUB_REF_NAME)"
