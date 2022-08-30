@@ -85,7 +85,7 @@ jobs:
       # The build runs, there are no local changes (cactus may check this, so a
       # consistent state is good to have)
       - name: Configure Git
-        run: git config --global user.email "nobody@nowhere.com" && git config --global user.name "Nobody"
+        run: git config --global user.email "nobody@nowhere.com" && git config --global user.name "Nobody" && git config --global gc.auto 0 && git config --global advice.detachedHead 0
 
       - name: Set Up Java
         uses: actions/setup-java@v3
