@@ -15,8 +15,11 @@ defaults:
 
 env:
   CACTUS_VERSION: 1.5.24
+  CACTUS_TEST_DEFAULT_DEBUG: false
+  CACTUS_SLF4J_DEBUG: false
+  CACTUS_TESTS_SKIP: true
   ZULIP_API_KEY: ${{ secrets.ZULIP_API_KEY }}
-  
+
 name: "Shared Branch Build"
 
 on:
