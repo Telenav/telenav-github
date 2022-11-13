@@ -14,7 +14,7 @@ defaults:
     shell: bash
 
 env:
-  CACTUS_VERSION: 1.5.24
+  CACTUS_VERSION: 1.5.48
   CACTUS_TEST_DEFAULT_DEBUG: false
   CACTUS_SLF4J_DEBUG: false
   CACTUS_TESTS_SKIP: true
@@ -198,10 +198,6 @@ jobs:
       # checkout machinations
       - name: Print Checked Out Branches
         run: cd $GITHUB_WORKSPACE/telenav-build && git submodule foreach git branch && git status
-
-      # Need to build superpoms, as they may be unpublished
-      - name: Build Superpoms
-        run: cd $GITHUB_WORKSPACE/telenav-build && mvn -f telenav-superpom/pom.xml install
 
       # Now build the real thing
       - name: Build Target Commit
