@@ -14,7 +14,7 @@ defaults:
     shell: bash
 
 env:
-  CACTUS_VERSION: 1.5.48
+  CACTUS_VERSION: 1.5.49
   CACTUS_TEST_DEFAULT_DEBUG: false
   CACTUS_SLF4J_DEBUG: false
   CACTUS_TESTS_SKIP: true
