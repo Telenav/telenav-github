@@ -113,9 +113,6 @@ jobs:
       # Delete the assets submodules before we do anything, since we
       # do not need them and they are huge and will slow down the job
       # considerably.
-      - name: Remove Cactus Assets Before Updating Submodules
-        run: cd $GITHUB_WORKSPACE/telenav-build && git rm -f cactus-assets
-
       - name: Remove Kivakit Assets Before Updating Submodules
         run: cd $GITHUB_WORKSPACE/telenav-build && git rm -f kivakit-assets
 
